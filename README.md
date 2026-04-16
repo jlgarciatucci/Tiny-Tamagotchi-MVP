@@ -19,20 +19,12 @@ The current MVP includes:
 
 This project deliberately does not include auth, inventory, currencies, notifications, or mini-games.
 
+## Architecture
+<img width="1228" height="717" alt="image" src="https://github.com/user-attachments/assets/14fb0c27-9265-4bb0-a09c-65c6b8fb5fbe" />
+
 ## Supabase Database
 <img width="835" height="668" alt="image" src="https://github.com/user-attachments/assets/0600bddb-00f3-4ce5-ad90-ea56374b9286" />
 
-
-App/backend/frontend flow placeholder:
-
-![Tiny Tamagotchi app flow placeholder](docs/images/app-backend-frontend-flow.png)
-
-Recommended screenshots:
-
-- Supabase table relationship view showing `pets`, `pet_events`, `pet_assets`, and `background_assets`.
-- Supabase Storage bucket view showing uploaded pet sprites and background images.
-- Running Streamlit app status page with a pet sprite over a background scene.
-- Optional architecture diagram showing Streamlit pages, service layer, domain engine, repositories, and Supabase.
 
 ## How The App Works
 
