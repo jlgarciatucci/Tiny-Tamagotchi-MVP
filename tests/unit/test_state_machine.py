@@ -7,33 +7,28 @@ from src.domain.pet_types import EventType, PetAction, PetState, StatBlock
 BASE_TIME = datetime(2026, 4, 16, 12, 0, tzinfo=timezone.utc)
 
 
-def test_sickness_requires_two_elapsed_tick_evaluations():
+def test_any_stat_below_threshold_makes_pet_sick_on_next_evaluation():
     pet = create_pet("Mochi", now=BASE_TIME, pet_id="pet-1").with_stats(
-        StatBlock(hunger=28, happiness=27, energy=80)
+        StatBlock(hunger=24, happiness=80, energy=80)
     )
 
-    first = apply_elapsed_time(pet, now=BASE_TIME + timedelta(minutes=5))
-    assert first.pet.state is PetState.NORMAL
-    assert first.pet.sick_streak == 1
+    result = apply_elapsed_time(pet, now=BASE_TIME + timedelta(seconds=30))
 
-    second = apply_elapsed_time(
-        first.pet,
-        now=BASE_TIME + timedelta(minutes=10),
-    )
-    assert second.pet.state is PetState.SICK
-    assert second.pet.sick_streak == 2
-    assert second.events[0].event_type is EventType.BECAME_SICK
+    assert result.pet.state is PetState.SICK
+    assert result.pet.sick_streak == 1
+    assert result.events[0].event_type is EventType.BECAME_SICK
 
 
-def test_bad_action_evaluation_does_not_immediately_make_pet_sick():
+def test_action_that_drops_one_stat_below_threshold_makes_pet_sick():
     pet = create_pet("Mochi", now=BASE_TIME, pet_id="pet-1").with_stats(
-        StatBlock(hunger=2, happiness=2, energy=80)
+        StatBlock(hunger=16, happiness=80, energy=80)
     )
 
     result = apply_action(pet, PetAction.PLAY, now=BASE_TIME)
 
-    assert result.pet.state is PetState.NORMAL
-    assert result.pet.sick_streak == 0
+    assert result.pet.state is PetState.SICK
+    assert result.pet.sick_streak == 1
+    assert any(event.event_type is EventType.BECAME_SICK for event in result.events)
 
 
 def test_sick_pet_recovers_after_two_good_evaluations():

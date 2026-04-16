@@ -143,7 +143,7 @@ def _update_streaks(pet: Pet, *, source: EvaluationSource) -> Pet:
         else:
             recovery_streak = 0
 
-        if source is EvaluationSource.ELAPSED_TICK and is_sickness_condition_met(pet):
+        if is_sickness_condition_met(pet):
             sick_streak += 1
         elif not is_sickness_condition_met(pet):
             sick_streak = 0
@@ -153,7 +153,7 @@ def _update_streaks(pet: Pet, *, source: EvaluationSource) -> Pet:
             recovery_streak=recovery_streak,
         )
 
-    if source is EvaluationSource.ELAPSED_TICK and is_sickness_condition_met(pet):
+    if is_sickness_condition_met(pet):
         sick_streak += 1
     elif not is_sickness_condition_met(pet):
         sick_streak = 0

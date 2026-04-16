@@ -187,6 +187,20 @@ def normalize_pet_stats(pet: Pet) -> Pet:
     return pet.with_stats(clamp_stats(pet.stats))
 
 
+def state_message(pet: Pet, *, now: datetime | None = None) -> str:
+    current_time = _ensure_aware(now or utc_now())
+    messages = pet_rules.STATE_MESSAGES[pet.state]
+    index_seed = (
+        pet.age_ticks
+        + pet.hunger
+        + pet.happiness
+        + pet.energy
+        + current_time.minute
+        + current_time.second
+    )
+    return messages[index_seed % len(messages)].format(name=pet.name)
+
+
 def _apply_one_tick(pet: Pet) -> Pet:
     return pet.with_stats(
         apply_delta(pet.stats, pet_rules.TICK_DECAY),
@@ -223,7 +237,24 @@ def _action_message(
         and after_stats.energy >= 30
     ):
         return pet_rules.COZY_REST_MESSAGE
-    return pet_rules.ACTION_MESSAGES[action]
+    return _standard_action_message(action, before, after_stats, now)
+
+
+def _standard_action_message(
+    action: PetAction,
+    before: Pet,
+    after_stats: StatBlock,
+    now: datetime,
+) -> str:
+    messages = pet_rules.ACTION_MESSAGES[action]
+    index_seed = (
+        before.care_action_count
+        + after_stats.hunger
+        + after_stats.happiness
+        + after_stats.energy
+        + now.minute
+    )
+    return messages[index_seed % len(messages)]
 
 
 def _feed_count_in_window(now: datetime, events: tuple[PetEvent, ...]) -> int:

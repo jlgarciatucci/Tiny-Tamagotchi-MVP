@@ -35,12 +35,12 @@ def test_existing_pet_resumes_and_persists_elapsed_time():
 
     result = load_active_pet(
         repository,
-        now=BASE_TIME + timedelta(minutes=5),
+        now=BASE_TIME + timedelta(minutes=1),
     )
 
     assert result.needs_creation is False
     assert result.pet is not None
-    assert result.pet.age_ticks == 1
+    assert result.pet.age_ticks == 2
     assert repository.pet == result.pet
 
 
@@ -71,14 +71,14 @@ def test_action_flow_applies_elapsed_decay_before_action():
         repository,
         created.pet,
         PetAction.PLAY,
-        now=BASE_TIME + timedelta(minutes=5),
+        now=BASE_TIME + timedelta(minutes=1),
     )
 
     assert result.error is None
-    assert result.pet.age_ticks == 1
-    assert result.pet.hunger == 72
-    assert result.pet.happiness == 93
-    assert result.pet.energy == 70
+    assert result.pet.age_ticks == 2
+    assert result.pet.hunger == 56
+    assert result.pet.happiness == 80
+    assert result.pet.energy == 64
 
 
 def test_reset_active_pet_replaces_pet_and_clears_events():

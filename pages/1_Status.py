@@ -7,7 +7,7 @@ import streamlit as st
 
 from src.data.supabase_client import SupabaseConfigError
 from src.domain import pet_rules
-from src.domain.pet_engine import PetValidationError
+from src.domain.pet_engine import PetValidationError, state_message
 from src.domain.pet_types import Pet, PetAction, PetState
 from src.services.asset_service import SceneAssets, load_scene_assets
 from src.services.persistence_service import build_supabase_repository
@@ -29,7 +29,6 @@ def _repository():
 
 def main() -> None:
     _render_styles()
-    _schedule_refresh()
 
     try:
         repository = _repository()
@@ -37,6 +36,11 @@ def main() -> None:
         st.warning(str(exc))
         return
 
+    _render_live_status(repository)
+
+
+@st.fragment(run_every=f"{int(pet_rules.TICK_DURATION.total_seconds())}s")
+def _render_live_status(repository) -> None:
     startup = load_active_pet(repository)
     if startup.error:
         st.warning(startup.error)
@@ -46,7 +50,7 @@ def main() -> None:
         return
 
     pet = startup.pet
-    message = st.session_state.get("pet_message") or _default_message(pet)
+    message = st.session_state.pop("pet_message", None) or _default_message(pet)
     scene_mode = st.session_state.setdefault("scene_mode", "day")
     scene_assets = load_scene_assets(repository, pet.state, scene_mode)
     if scene_assets.error:
@@ -72,7 +76,7 @@ def main() -> None:
             )
             if mode != scene_mode:
                 st.session_state["scene_mode"] = mode
-                st.rerun()
+                _rerun_live_fragment()
         else:
             st.caption(scene_assets.effective_scene_mode.title())
 
@@ -89,24 +93,10 @@ def main() -> None:
                 st.session_state["pet_message"] = result.message
                 if result.error:
                     st.warning(result.error)
-                st.rerun()
+                _rerun_live_fragment()
 
     st.caption(
         "This scene is powered by the real engine, timing, state transitions, and Supabase persistence."
-    )
-
-
-def _schedule_refresh() -> None:
-    interval_ms = max(1000, int(pet_rules.TICK_DURATION.total_seconds() * 1000))
-    st.markdown(
-        f"""
-<script>
-setTimeout(function() {{
-    window.parent.location.reload();
-}}, {interval_ms});
-</script>
-        """.strip(),
-        unsafe_allow_html=True,
     )
 
 
@@ -132,7 +122,11 @@ def _render_creation(repository) -> None:
         return
 
     st.session_state["pet_message"] = "Your tiny friend is here."
-    st.rerun()
+    _rerun_live_fragment()
+
+
+def _rerun_live_fragment() -> None:
+    st.rerun(scope="fragment")
 
 
 def _render_scene(
@@ -301,11 +295,7 @@ def _pet_face(pet: Pet) -> str:
 
 
 def _default_message(pet: Pet) -> str:
-    if pet.state is PetState.SICK:
-        return f"{pet.name} needs gentle, balanced care."
-    if pet.state is PetState.EVOLVED:
-        return f"{pet.name} is glowing with tiny confidence."
-    return f"{pet.name} is feeling cozy today."
+    return state_message(pet)
 
 
 def _render_styles() -> None:
@@ -509,13 +499,39 @@ def _render_styles() -> None:
         .speech {
             background: rgba(255,255,255,0.95);
             color:#25324a;
-            padding: 8px 12px;
+            position: relative;
+            padding: 10px 14px;
             border-radius: 8px;
+            border: 3px solid #25324a;
             font-size: 0.9rem;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 14px;
             min-width: 220px;
-            box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+            box-shadow: 5px 5px 0 rgba(37,50,74,0.22);
+        }
+        .speech:before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -17px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-top: 17px solid #25324a;
+        }
+        .speech:after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -11px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 13px solid rgba(255,255,255,0.95);
         }
         .pet {
             font-family: monospace;

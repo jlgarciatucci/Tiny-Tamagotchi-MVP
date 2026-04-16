@@ -9,6 +9,7 @@ from src.domain.pet_engine import (
     apply_action,
     apply_elapsed_time,
     create_pet,
+    state_message,
 )
 from src.domain.pet_types import EventType, PetAction, PetEvent, PetState, StatBlock
 
@@ -52,6 +53,7 @@ def test_apply_action_updates_stats_and_emits_action_event():
     assert result.pet.happiness == 96
     assert result.pet.energy == 72
     assert result.pet.care_action_count == 1
+    assert result.message in pet_rules.ACTION_MESSAGES[PetAction.PLAY]
     assert result.events[0].event_type is EventType.ACTION
     assert result.events[0].action is PetAction.PLAY
 
@@ -115,20 +117,35 @@ def test_action_clamps_stats_and_uses_easter_egg_messages():
     assert result.message == pet_rules.SNACK_ATTACK_MESSAGE
 
 
+def test_standard_action_messages_have_deterministic_variety():
+    pet = create_pet("Mochi", now=BASE_TIME, pet_id="pet-1")
+
+    first = apply_action(pet, PetAction.REST, now=BASE_TIME)
+    second = apply_action(
+        first.pet,
+        PetAction.REST,
+        now=BASE_TIME + timedelta(minutes=1),
+    )
+
+    assert first.message in pet_rules.ACTION_MESSAGES[PetAction.REST]
+    assert second.message in pet_rules.ACTION_MESSAGES[PetAction.REST]
+    assert first.message != second.message
+
+
 def test_apply_elapsed_time_uses_full_ticks_and_preserves_partial_tick():
     pet = create_pet("Mochi", now=BASE_TIME, pet_id="pet-1")
 
     result = apply_elapsed_time(
         pet,
-        now=BASE_TIME + timedelta(minutes=12),
+        now=BASE_TIME + timedelta(minutes=2, seconds=20),
     )
 
-    assert result.applied_ticks == 2
-    assert result.pet.hunger == 72
-    assert result.pet.happiness == 74
-    assert result.pet.energy == 76
-    assert result.pet.age_ticks == 2
-    assert result.pet.last_tick_at == BASE_TIME + timedelta(minutes=10)
+    assert result.applied_ticks == 4
+    assert result.pet.hunger == 40
+    assert result.pet.happiness == 48
+    assert result.pet.energy == 64
+    assert result.pet.age_ticks == 4
+    assert result.pet.last_tick_at == BASE_TIME + timedelta(minutes=2)
 
 
 def test_apply_elapsed_time_caps_offline_catchup():
@@ -160,3 +177,33 @@ def test_apply_elapsed_time_handles_future_last_tick_without_decay():
     assert result.applied_ticks == 0
     assert result.pet == pet
     assert result.events[0].event_type is EventType.TIME_ANOMALY
+
+
+def test_state_message_rotates_with_state_and_time():
+    normal = create_pet("Mochi", now=BASE_TIME, pet_id="pet-1")
+    sick = normal.with_changes(state=PetState.SICK)
+    evolved = normal.with_changes(state=PetState.EVOLVED, is_evolved=True)
+
+    normal_message = state_message(normal, now=BASE_TIME)
+    later_normal_message = state_message(
+        normal,
+        now=BASE_TIME + timedelta(seconds=1),
+    )
+
+    assert normal_message in {
+        template.format(name="Mochi")
+        for template in pet_rules.STATE_MESSAGES[PetState.NORMAL]
+    }
+    assert later_normal_message in {
+        template.format(name="Mochi")
+        for template in pet_rules.STATE_MESSAGES[PetState.NORMAL]
+    }
+    assert normal_message != later_normal_message
+    assert state_message(sick, now=BASE_TIME) in {
+        template.format(name="Mochi")
+        for template in pet_rules.STATE_MESSAGES[PetState.SICK]
+    }
+    assert state_message(evolved, now=BASE_TIME) in {
+        template.format(name="Mochi")
+        for template in pet_rules.STATE_MESSAGES[PetState.EVOLVED]
+    }
