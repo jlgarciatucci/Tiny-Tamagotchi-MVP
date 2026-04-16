@@ -3,3 +3,6 @@ supabase
 pytest
 python-dotenv
 pydantic
+certifi
+truststore; python_version >= "3.10"
+python-certifi-win32; sys_platform == "win32" and python_version < "3.10"
