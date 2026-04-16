@@ -16,13 +16,9 @@ The current MVP includes:
 
 This project deliberately does not include auth, inventory, currencies, notifications, or mini-games.
 
-## Image Placeholders
+## Supabase Database
+<img width="835" height="668" alt="image" src="https://github.com/user-attachments/assets/0600bddb-00f3-4ce5-ad90-ea56374b9286" />
 
-Add screenshots to these locations when you want the README to show the database and architecture visually.
-
-Database/schema screenshot placeholder:
-
-![Supabase database schema placeholder](docs/images/supabase-database-schema.png)
 
 App/backend/frontend flow placeholder:
 
