@@ -1,5 +1,8 @@
 # Tiny Tamagotchi MVP
 
+<img width="889" height="817" alt="image" src="https://github.com/user-attachments/assets/628c53ba-72c6-46ad-bbab-51530360acdf" />
+
+
 A small Streamlit and Supabase pet-care demo. The app intentionally stays narrow: one active pet, three stats, three actions, and three functional states.
 
 The current MVP includes:
