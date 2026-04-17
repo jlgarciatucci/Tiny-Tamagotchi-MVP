@@ -2,6 +2,8 @@
 
 <img width="889" height="817" alt="image" src="https://github.com/user-attachments/assets/628c53ba-72c6-46ad-bbab-51530360acdf" />
 
+## MVP LINK
+https://tiny-tamagotchi.streamlit.app/
 
 A small Streamlit and Supabase pet-care demo. The app intentionally stays narrow: one active pet, three stats, three actions, and three functional states.
 
@@ -25,8 +27,6 @@ This project deliberately does not include auth, inventory, currencies, notifica
 ## Supabase Database
 <img width="835" height="668" alt="image" src="https://github.com/user-attachments/assets/0600bddb-00f3-4ce5-ad90-ea56374b9286" />
 
-<<<<<<< HEAD
-=======
 
 ## Spec-Driven Development With Codex
 
@@ -112,7 +112,21 @@ The original Markdown specs intentionally defined a conservative MVP. During int
 
 These changes are now reflected in the current code and tests. The original spec files remain useful because they show the planning process that Codex followed to create the first working version, while this README documents the current implemented demo behavior.
 
->>>>>>> 390db7b (readme update)
+## Pets and Background Images Generated with ChatGPT
+
+| Normal Pet | Sick Pet | Evolved Pet |
+| --- | --- | --- |
+| <img width="153.6" height="153.6" alt="normal_pet" src="https://github.com/user-attachments/assets/3af846b2-9c1c-4884-86bb-9844edb3d032" /> | <img width="153.6" height="153.6" alt="sick_pet" src="https://github.com/user-attachments/assets/111d2ab7-90d0-4f3d-b8df-7881cfdf6a66" /> | <img width="153.6" height="153.6" alt="evolved_pet" src="https://github.com/user-attachments/assets/193006a7-4317-493b-8763-c80345afbaf4" />
+
+
+| Daytime Backgorund | Night Background | Evolved Background |
+| --- | --- | --- |
+| <img width="153.6" height="102.4" alt="daytime_scene" src="https://github.com/user-attachments/assets/43f0793b-8dc1-46e9-9373-460f51c60a6c" /> | <img width="153.6" height="102.4" alt="night_scene" src="https://github.com/user-attachments/assets/eb91efe8-f692-4653-ac96-56a3458204c1" /> | <img width="153.6" height="102.4" alt="evolved_scene" src="https://github.com/user-attachments/assets/2df2becc-427d-4a25-a0eb-ff3233ad921d" />
+
+
+
+
+
 
 ## How The App Works
 
