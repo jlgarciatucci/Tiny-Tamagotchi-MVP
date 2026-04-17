@@ -13,7 +13,13 @@ from src.data.repositories import (
     pet_to_record,
 )
 from src.domain.pet_types import EventType, PetAction, PetEvent
-from src.services.pet_service import care_for_pet, create_pet, load_active_pet, reset_active_pet
+from src.services.pet_service import (
+    advance_pet_time,
+    care_for_pet,
+    create_pet,
+    load_active_pet,
+    reset_active_pet,
+)
 
 
 BASE_TIME = datetime(2026, 4, 16, 12, 0, tzinfo=timezone.utc)
@@ -39,6 +45,24 @@ def test_existing_pet_resumes_and_persists_elapsed_time():
     )
 
     assert result.needs_creation is False
+    assert result.pet is not None
+    assert result.pet.age_ticks == 2
+    assert repository.pet == result.pet
+
+
+def test_cached_pet_refresh_advances_time_without_fetching_again():
+    repository = InMemoryPetRepository()
+    created = create_pet(repository, "Mochi", now=BASE_TIME)
+    assert created.pet is not None
+
+    result = advance_pet_time(
+        repository,
+        created.pet,
+        now=BASE_TIME + timedelta(minutes=1),
+    )
+
+    assert result.needs_creation is False
+    assert result.error is None
     assert result.pet is not None
     assert result.pet.age_ticks == 2
     assert repository.pet == result.pet

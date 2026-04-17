@@ -11,7 +11,12 @@ from src.domain.pet_engine import PetValidationError, state_message
 from src.domain.pet_types import Pet, PetAction, PetState
 from src.services.asset_service import SceneAssets, load_scene_assets
 from src.services.persistence_service import build_supabase_repository
-from src.services.pet_service import care_for_pet, create_pet, load_active_pet
+from src.services.pet_service import (
+    advance_pet_time,
+    care_for_pet,
+    create_pet,
+    load_active_pet,
+)
 
 
 st.set_page_config(
@@ -22,9 +27,17 @@ st.set_page_config(
 )
 
 
+SESSION_PET_KEY = "active_pet"
+
+
 @st.cache_resource
 def _repository():
     return build_supabase_repository()
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _cached_scene_assets(pet_state_value: str, scene_mode: str) -> SceneAssets:
+    return load_scene_assets(_repository(), PetState(pet_state_value), scene_mode)
 
 
 def main() -> None:
@@ -41,18 +54,19 @@ def main() -> None:
 
 @st.fragment(run_every=f"{int(pet_rules.TICK_DURATION.total_seconds())}s")
 def _render_live_status(repository) -> None:
-    startup = load_active_pet(repository)
+    startup = _load_live_pet(repository)
     if startup.error:
         st.warning(startup.error)
 
     if startup.needs_creation or startup.pet is None:
+        st.session_state.pop(SESSION_PET_KEY, None)
         _render_creation(repository)
         return
 
     pet = startup.pet
     message = st.session_state.pop("pet_message", None) or _default_message(pet)
     scene_mode = st.session_state.setdefault("scene_mode", "day")
-    scene_assets = load_scene_assets(repository, pet.state, scene_mode)
+    scene_assets = _cached_scene_assets(pet.state.value, scene_mode)
     if scene_assets.error:
         st.warning(scene_assets.error)
 
@@ -90,6 +104,7 @@ def _render_live_status(repository) -> None:
         with column:
             if st.button(label, use_container_width=True):
                 result = care_for_pet(repository, pet, action)
+                st.session_state[SESSION_PET_KEY] = result.pet
                 st.session_state["pet_message"] = result.message
                 if result.error:
                     st.warning(result.error)
@@ -98,6 +113,19 @@ def _render_live_status(repository) -> None:
     st.caption(
         "This scene is powered by the real engine, timing, state transitions, and Supabase persistence."
     )
+
+
+def _load_live_pet(repository):
+    cached_pet = st.session_state.get(SESSION_PET_KEY)
+    if isinstance(cached_pet, Pet):
+        result = advance_pet_time(repository, cached_pet)
+    else:
+        result = load_active_pet(repository)
+
+    if result.pet is not None:
+        st.session_state[SESSION_PET_KEY] = result.pet
+
+    return result
 
 
 def _render_creation(repository) -> None:
@@ -121,6 +149,8 @@ def _render_creation(repository) -> None:
         st.error(result.error)
         return
 
+    if result.pet is not None:
+        st.session_state[SESSION_PET_KEY] = result.pet
     st.session_state["pet_message"] = "Your tiny friend is here."
     _rerun_live_fragment()
 
@@ -582,6 +612,7 @@ def _render_styles() -> None:
         .bar-fill {
             height:100%;
             border-radius:8px;
+            transition: width 0.35s ease, background 0.25s ease;
         }
         div.stButton > button {
             width: 100%;

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Tiny Tamagotchi Supabase schema diagram</title>
+  <desc id="desc">Schema diagram for pets, pet_events, pet_assets, and background_assets tables.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fbff; }
+      .title { font: 800 30px Arial, sans-serif; fill: #20283a; }
+      .subtitle { font: 600 16px Arial, sans-serif; fill: #5a6175; }
+      .table { fill: #ffffff; stroke: #20283a; stroke-width: 3; rx: 8; }
+      .header { fill: #ff9ec7; }
+      .header2 { fill: #ffe46b; }
+      .header3 { fill: #8bd982; }
+      .header4 { fill: #9ed7ff; }
+      .htext { font: 800 20px Arial, sans-serif; fill: #20283a; }
+      .field { font: 600 14px Consolas, monospace; fill: #20283a; }
+      .note { font: 600 13px Arial, sans-serif; fill: #5a6175; }
+      .pk { fill: #fff5cf; }
+      .fk { fill: #e9f5ff; }
+      .arrow { stroke: #20283a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .muted { stroke: #7b86a0; stroke-width: 2; stroke-dasharray: 7 7; fill: none; marker-end: url(#mutedArrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#20283a"/>
+    </marker>
+    <marker id="mutedArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#7b86a0"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1280" height="760"/>
+  <text class="title" x="50" y="55">Supabase Schema</text>
+  <text class="subtitle" x="50" y="84">One active pet, event history, and image metadata rows for Storage-backed rendering.</text>
+
+  <g transform="translate(60 125)">
+    <rect class="table" width="330" height="500" rx="8"/>
+    <rect class="header" width="330" height="54" rx="8"/>
+    <text class="htext" x="24" y="35">pets</text>
+    <rect class="pk" x="18" y="72" width="294" height="26" rx="4"/>
+    <text class="field" x="30" y="91">id text primary key</text>
+    <text class="field" x="30" y="124">name text</text>
+    <text class="field" x="30" y="151">state text</text>
+    <text class="field" x="30" y="178">hunger int4</text>
+    <text class="field" x="30" y="205">happiness int4</text>
+    <text class="field" x="30" y="232">energy int4</text>
+    <text class="field" x="30" y="259">age_ticks int4</text>
+    <text class="field" x="30" y="286">is_evolved bool</text>
+    <text class="field" x="30" y="313">evolved_at timestamptz</text>
+    <text class="field" x="30" y="340">last_tick_at timestamptz</text>
+    <text class="field" x="30" y="367">created_at timestamptz</text>
+    <text class="field" x="30" y="394">updated_at timestamptz</text>
+    <text class="field" x="30" y="421">sick_streak int4</text>
+    <text class="field" x="30" y="448">recovery_streak int4</text>
+    <text class="field" x="30" y="475">care_action_count int4</text>
+  </g>
+
+  <g transform="translate(505 125)">
+    <rect class="table" width="330" height="295" rx="8"/>
+    <rect class="header2" width="330" height="54" rx="8"/>
+    <text class="htext" x="24" y="35">pet_events</text>
+    <rect class="pk" x="18" y="72" width="294" height="26" rx="4"/>
+    <text class="field" x="30" y="91">id int8 primary key</text>
+    <rect class="fk" x="18" y="104" width="294" height="26" rx="4"/>
+    <text class="field" x="30" y="123">pet_id text foreign key</text>
+    <text class="field" x="30" y="156">event_type text</text>
+    <text class="field" x="30" y="183">event_message text</text>
+    <text class="field" x="30" y="210">action text nullable</text>
+    <text class="field" x="30" y="237">payload_json jsonb</text>
+    <text class="field" x="30" y="264">created_at timestamptz</text>
+  </g>
+
+  <g transform="translate(895 125)">
+    <rect class="table" width="320" height="295" rx="8"/>
+    <rect class="header3" width="320" height="54" rx="8"/>
+    <text class="htext" x="24" y="35">pet_assets</text>
+    <rect class="pk" x="18" y="72" width="284" height="26" rx="4"/>
+    <text class="field" x="30" y="91">id int8 primary key</text>
+    <text class="field" x="30" y="124">asset_key text</text>
+    <text class="field" x="30" y="151">state text</text>
+    <text class="field" x="30" y="178">file_path text</text>
+    <text class="field" x="30" y="205">public_url text</text>
+    <text class="field" x="30" y="232">width int4, height int4</text>
+    <text class="field" x="30" y="259">is_active bool</text>
+  </g>
+
+  <g transform="translate(895 475)">
+    <rect class="table" width="320" height="230" rx="8"/>
+    <rect class="header4" width="320" height="54" rx="8"/>
+    <text class="htext" x="24" y="35">background_assets</text>
+    <rect class="pk" x="18" y="72" width="284" height="26" rx="4"/>
+    <text class="field" x="30" y="91">id int8 primary key</text>
+    <text class="field" x="30" y="124">asset_key text</text>
+    <text class="field" x="30" y="151">scene_type text</text>
+    <text class="field" x="30" y="178">file_path/public_url</text>
+    <text class="field" x="30" y="205">width, height, is_active</text>
+  </g>
+
+  <path class="arrow" d="M505 245 C455 245 445 195 392 195"/>
+  <text class="note" x="420" y="175">pet_events.pet_id -> pets.id</text>
+
+  <path class="muted" d="M835 265 C865 265 865 265 895 265"/>
+  <text class="note" x="855" y="245">state selects sprite metadata</text>
+
+  <path class="muted" d="M835 370 C865 470 865 565 895 590"/>
+  <text class="note" x="705" y="585">scene_type selects background metadata</text>
+
+  <text class="note" x="60" y="690">The app stores only one gameplay pet: id = active-pet.</text>
+  <text class="note" x="60" y="714">Image rows point to Supabase Storage objects through public_url or bucket/object file_path.</text>
+</svg>

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Tiny Tamagotchi frontend and backend flow</title>
+  <desc id="desc">Architecture diagram showing Streamlit pages, service layer, domain engine, repositories, Supabase database, and Supabase Storage.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fff7fb; }
+      .panel { fill: #ffffff; stroke: #273044; stroke-width: 3; rx: 8; }
+      .group { fill: #f6fbff; stroke: #7b86a0; stroke-width: 2; rx: 8; }
+      .title { font: 800 30px Arial, sans-serif; fill: #273044; }
+      .subtitle { font: 600 16px Arial, sans-serif; fill: #5a6175; }
+      .label { font: 800 18px Arial, sans-serif; fill: #273044; }
+      .small { font: 600 14px Arial, sans-serif; fill: #4b5366; }
+      .tiny { font: 600 12px Arial, sans-serif; fill: #4b5366; }
+      .arrow { stroke: #273044; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .muted-arrow { stroke: #7b86a0; stroke-width: 2.5; fill: none; marker-end: url(#mutedArrow); }
+      .pink { fill: #ffe3f0; stroke: #d45c93; }
+      .yellow { fill: #fff2b5; stroke: #c79500; }
+      .green { fill: #dbf8df; stroke: #39904a; }
+      .blue { fill: #dff2ff; stroke: #337fab; }
+      .lav { fill: #ece7ff; stroke: #725bc4; }
+      .dark { fill: #273044; }
+      .white { fill: #ffffff; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#273044"/>
+    </marker>
+    <marker id="mutedArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#7b86a0"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="760"/>
+  <text class="title" x="50" y="55">Tiny Tamagotchi MVP Architecture</text>
+  <text class="subtitle" x="50" y="84">Streamlit renders the UI. Services orchestrate. Domain code owns simulation rules. Repositories persist to Supabase.</text>
+
+  <rect class="group" x="40" y="120" width="300" height="520" rx="8"/>
+  <text class="label" x="65" y="155">Frontend: Streamlit</text>
+  <rect class="panel pink" x="70" y="185" width="240" height="74" rx="8"/>
+  <text class="small" x="92" y="215">app.py</text>
+  <text class="tiny" x="92" y="238">Landing, pet name, reset/start</text>
+  <rect class="panel pink" x="70" y="285" width="240" height="86" rx="8"/>
+  <text class="small" x="92" y="316">pages/1_Status.py</text>
+  <text class="tiny" x="92" y="339">Device UI, scene, stats, actions</text>
+  <rect class="panel pink" x="70" y="397" width="240" height="74" rx="8"/>
+  <text class="small" x="92" y="427">pages/2_History.py</text>
+  <text class="tiny" x="92" y="450">Recent persisted events</text>
+  <rect class="panel pink" x="70" y="497" width="240" height="74" rx="8"/>
+  <text class="small" x="92" y="527">pages/3_About.py</text>
+  <text class="tiny" x="92" y="550">Short app description</text>
+
+  <rect class="group" x="410" y="120" width="280" height="520" rx="8"/>
+  <text class="label" x="435" y="155">Service Layer</text>
+  <rect class="panel yellow" x="440" y="205" width="220" height="90" rx="8"/>
+  <text class="small" x="462" y="238">pet_service.py</text>
+  <text class="tiny" x="462" y="262">load, create, reset, care</text>
+  <rect class="panel yellow" x="440" y="335" width="220" height="90" rx="8"/>
+  <text class="small" x="462" y="368">asset_service.py</text>
+  <text class="tiny" x="462" y="392">state to image selection</text>
+  <rect class="panel yellow" x="440" y="465" width="220" height="90" rx="8"/>
+  <text class="small" x="462" y="498">persistence_service.py</text>
+  <text class="tiny" x="462" y="522">builds Supabase repository</text>
+
+  <rect class="group" x="760" y="120" width="270" height="520" rx="8"/>
+  <text class="label" x="785" y="155">Domain Layer</text>
+  <rect class="panel green" x="790" y="185" width="210" height="80" rx="8"/>
+  <text class="small" x="812" y="217">pet_types.py</text>
+  <text class="tiny" x="812" y="240">Pet, stats, events, enums</text>
+  <rect class="panel green" x="790" y="295" width="210" height="80" rx="8"/>
+  <text class="small" x="812" y="327">pet_rules.py</text>
+  <text class="tiny" x="812" y="350">ticks, decay, thresholds</text>
+  <rect class="panel green" x="790" y="405" width="210" height="80" rx="8"/>
+  <text class="small" x="812" y="437">pet_engine.py</text>
+  <text class="tiny" x="812" y="460">actions, elapsed time</text>
+  <rect class="panel green" x="790" y="515" width="210" height="80" rx="8"/>
+  <text class="small" x="812" y="547">state_machine.py</text>
+  <text class="tiny" x="812" y="570">normal, sick, evolved</text>
+
+  <rect class="group" x="1090" y="120" width="150" height="520" rx="8"/>
+  <text class="label" x="1110" y="155">Supabase</text>
+  <rect class="panel blue" x="1112" y="205" width="105" height="120" rx="8"/>
+  <text class="small" x="1130" y="238">Database</text>
+  <text class="tiny" x="1126" y="264">pets</text>
+  <text class="tiny" x="1126" y="284">pet_events</text>
+  <text class="tiny" x="1126" y="304">asset rows</text>
+  <rect class="panel lav" x="1112" y="405" width="105" height="120" rx="8"/>
+  <text class="small" x="1129" y="438">Storage</text>
+  <text class="tiny" x="1126" y="464">pet PNGs</text>
+  <text class="tiny" x="1126" y="484">scene PNGs</text>
+
+  <path class="arrow" d="M310 330 C360 330 385 250 435 250"/>
+  <path class="arrow" d="M310 330 C360 330 385 380 435 380"/>
+  <path class="arrow" d="M660 250 C710 250 735 445 785 445"/>
+  <path class="arrow" d="M660 380 C720 380 735 335 785 335"/>
+  <path class="muted-arrow" d="M660 510 C835 510 930 265 1108 265"/>
+  <path class="muted-arrow" d="M660 380 C840 380 940 465 1108 465"/>
+  <path class="muted-arrow" d="M1000 445 C1050 445 1060 265 1108 265"/>
+
+  <rect class="dark" x="50" y="675" width="1180" height="45" rx="8"/>
+  <text class="white" x="75" y="704" style="font: 700 16px Arial, sans-serif;">Rule of thumb: pages render only; services coordinate; domain code simulates; repositories talk to Supabase.</text>
+</svg>

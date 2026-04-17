@@ -20,6 +20,9 @@ st.set_page_config(
 )
 
 
+SESSION_PET_KEY = "active_pet"
+
+
 @st.cache_resource
 def _repository():
     return build_supabase_repository()
@@ -66,6 +69,9 @@ def main() -> None:
         if result.error:
             st.error(result.error)
             return
+
+        if result.pet is not None:
+            st.session_state[SESSION_PET_KEY] = result.pet
 
         if existing_pet is None or name.strip() != existing_pet.name:
             st.session_state["pet_message"] = "Your tiny friend is here."

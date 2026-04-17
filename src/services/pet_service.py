@@ -67,6 +67,32 @@ def load_active_pet(
     )
 
 
+def advance_pet_time(
+    repository: PetRepository,
+    pet: Pet,
+    *,
+    now: datetime | None = None,
+) -> StartupResult:
+    tick_result = apply_elapsed_time(pet, now=now)
+    if tick_result.applied_ticks > 0 or tick_result.events:
+        try:
+            repository.upsert_pet(tick_result.pet)
+            repository.append_events(tick_result.events)
+        except RepositoryError as exc:
+            return StartupResult(
+                pet=tick_result.pet,
+                needs_creation=False,
+                events=tick_result.events,
+                error=str(exc),
+            )
+
+    return StartupResult(
+        pet=tick_result.pet,
+        needs_creation=False,
+        events=tick_result.events,
+    )
+
+
 def create_pet(
     repository: PetRepository,
     name: str,

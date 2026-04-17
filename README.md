@@ -25,6 +25,94 @@ This project deliberately does not include auth, inventory, currencies, notifica
 ## Supabase Database
 <img width="835" height="668" alt="image" src="https://github.com/user-attachments/assets/0600bddb-00f3-4ce5-ad90-ea56374b9286" />
 
+<<<<<<< HEAD
+=======
+
+## Spec-Driven Development With Codex
+
+This app was built using a spec-driven development workflow in Codex. Instead of starting from Streamlit widgets and adding behavior ad hoc, the product was first described in Markdown specifications. Codex then used those documents as the implementation contract for the Python domain model, service layer, Supabase persistence, Streamlit pages, and pytest tests.
+
+The goal of the workflow was to make the app implementation-ready before coding:
+
+1. Define the product mission and strict MVP boundaries.
+2. Break the app into small feature areas.
+3. Write requirements with stable IDs.
+4. Write validation plans before implementation.
+5. Implement pure domain logic first.
+6. Add Supabase persistence behind a repository layer.
+7. Build Streamlit UI on top of the tested engine.
+8. Keep user-facing polish separate from simulation rules.
+9. Use pytest to prove the important behavior.
+10. Iterate only by updating or consciously overriding the documented rules.
+
+### Specification Documents Given To Codex
+
+The implementation-driving Markdown files were organized by feature. Each folder contains a feature plan, formal requirements, and validation notes so Codex had product intent, engineering constraints, and test expectations before writing code.
+
+| File | Purpose | How Codex Used It |
+|---|---|---|
+| `specs/mission.md` | Defines the product mission, target experience, non-goals, success criteria, and constraints. | Set the app scope: one pet, three stats, three actions, three states, no auth, no inventory, no currencies, no mini-games. |
+| `specs/roadmap.md` | Defines the recommended implementation phases. | Guided the build order: specs, domain model, engine, persistence, UI, validation, deployment readiness. |
+| `specs/tech-stack.md` | Defines Streamlit, Python, Supabase Postgres, Supabase client, pytest, and Streamlit Community Cloud. | Established the architecture: thin Streamlit pages, pure Python domain logic, service layer, repository layer, Supabase source of truth. |
+| `pet-core/feature-plan.md` | Describes the pet identity model, first-run flow, naming, default stats, and single active pet rule. | Drove `Pet`, `StatBlock`, creation behavior, name validation, default values, and the fixed active-pet flow. |
+| `pet-core/requirements.md` | Lists `PC-*` requirements for creation, naming, defaults, and safe startup. | Became unit and integration checks around pet creation, trimming, invalid names, default stats, and loading an existing pet. |
+| `pet-core/validation.md` | Defines automated and manual validation for the pet core. | Informed tests for deterministic defaults and first-run behavior. |
+| `time-simulation/feature-plan.md` | Describes elapsed-time reconstruction, discrete ticks, stat decay, age progression, and offline catch-up. | Drove `apply_elapsed_time()`, `last_tick_at` reconstruction, full-tick-only decay, partial tick preservation, and offline caps. |
+| `time-simulation/requirements.md` | Lists `TS-*` requirements for tick duration, decay, clamping, future timestamps, and deterministic replay. | Became tests for elapsed ticks, clamping, future timestamp safety, and deterministic time math. |
+| `time-simulation/validation.md` | Defines automated and manual validation for time simulation. | Informed tests that load a pet at controlled timestamps and verify exact stat and age changes. |
+| `actions-and-feedback/feature-plan.md` | Defines Feed, Play, Rest, their tradeoffs, feedback messages, and easter eggs. | Drove `ACTION_EFFECTS`, action result events, standard messages, and special messages like snack attack, tired play, and cozy rest. |
+| `actions-and-feedback/requirements.md` | Lists `AF-*` requirements for supported actions, exact stat deltas, invalid action handling, and feedback. | Became tests for action effects, stat clamping, invalid actions, event logging, and deterministic feedback. |
+| `actions-and-feedback/validation.md` | Defines validation for action behavior and user feedback. | Informed tests and manual expectations for visible stat changes after button clicks. |
+| `state-transitions/feature-plan.md` | Defines Normal, Sick, and Evolved states, recovery, evolution, priority, and transition events. | Drove `state_machine.py`, transition event creation, recovery to Normal/Evolved, single evolution, and sickness-before-evolution priority. |
+| `state-transitions/requirements.md` | Lists `ST-*` requirements for state support, sickness, recovery, evolution, event logging, and determinism. | Became tests for becoming Sick, recovering, evolving once, blocking evolution while Sick, and deterministic transitions. |
+| `state-transitions/validation.md` | Defines automated and manual validation for state transitions. | Informed transition-focused pytest cases and demo checks. |
+| `persistence/feature-plan.md` | Defines Supabase as the source of truth, load/save strategy, event storage, and invalid data strategy. | Drove `SupabasePetRepository`, `InMemoryPetRepository`, record conversion, startup load, save after action, and graceful errors. |
+| `persistence/requirements.md` | Lists `PR-*` requirements for authoritative persistence, event storage, first-run detection, resume, saves, invalid records, and secrets. | Became integration tests for persistence flow, serialization, malformed timestamps, invalid states, and action save behavior. |
+| `persistence/validation.md` | Defines validation for persistence and resume behavior. | Informed integration tests using the in-memory repository and Supabase-shaped records. |
+
+### How The Specs Mapped To The Code
+
+The Markdown specs map directly to the repository structure:
+
+| Spec Area | Implementation |
+|---|---|
+| Pet Core | `src/domain/pet_types.py`, `src/domain/pet_engine.py`, `app.py` |
+| Time Simulation | `src/domain/pet_rules.py`, `src/domain/pet_engine.py`, `src/services/pet_service.py` |
+| Actions and Feedback | `src/domain/pet_rules.py`, `src/domain/pet_engine.py`, `pages/1_Status.py` |
+| State Transitions | `src/domain/state_machine.py`, `src/domain/pet_engine.py` |
+| Persistence | `src/data/supabase_client.py`, `src/data/repositories.py`, `src/services/persistence_service.py`, `src/services/pet_service.py` |
+| Validation | `tests/unit/`, `tests/integration/`, `tests/smoke/` |
+
+This is why the Streamlit pages do not contain core pet logic. They call services, and services call the domain engine. That separation came directly from the specs, especially the mission principle of "thin UI, thick domain logic."
+
+### Codex Implementation Sequence
+
+Codex followed the specs in this order:
+
+1. Read the product specs under `specs/`.
+2. Read each feature folder: `pet-core`, `time-simulation`, `actions-and-feedback`, `state-transitions`, and `persistence`.
+3. Created the domain foundation in `src/domain`.
+4. Implemented deterministic creation, action, tick, and state-transition behavior.
+5. Added pytest tests against the domain engine and state machine.
+6. Added Supabase persistence through repository abstractions.
+7. Added integration tests using an in-memory repository.
+8. Built Streamlit pages that call services instead of owning pet rules.
+9. Added Supabase image asset lookup for pet sprites and background scenes.
+10. Preserved the UI polish while keeping behavior testable.
+
+### Spec Evolution During The Demo
+
+The original Markdown specs intentionally defined a conservative MVP. During interactive demo tuning, a few values were changed to make behavior visible faster:
+
+- Tick duration was changed from the original longer spec value to `30` seconds.
+- Demo decay was changed to Hunger `-10`, Happiness `-8`, and Energy `-4` per tick.
+- Sickness was changed so any one stat below `15` makes the pet Sick on the next engine evaluation.
+- Supabase image asset metadata was added for real pet sprites and background images.
+- The landing and status pages were polished while keeping logic in domain and service modules.
+
+These changes are now reflected in the current code and tests. The original spec files remain useful because they show the planning process that Codex followed to create the first working version, while this README documents the current implemented demo behavior.
+
+>>>>>>> 390db7b (readme update)
 
 ## How The App Works
 
