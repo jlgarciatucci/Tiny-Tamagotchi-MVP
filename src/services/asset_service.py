@@ -3,13 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.data.repositories import AssetRecord, PetRepository, RepositoryError
-from src.domain.pet_types import PetState
+from src.domain.pet_types import PetCharacter, PetState
 
 
-PET_ASSET_BY_STATE: dict[PetState, str] = {
-    PetState.NORMAL: "normal_pet",
-    PetState.SICK: "sick_pet",
-    PetState.EVOLVED: "evolved_pet",
+PET_ASSET_LABELS: dict[PetCharacter, dict[PetState, str]] = {
+    PetCharacter.ORIGINAL: {
+        PetState.NORMAL: "normal_pet",
+        PetState.SICK: "sick_pet",
+        PetState.EVOLVED: "evolved_pet",
+    },
+    PetCharacter.BEAGLE: {
+        PetState.NORMAL: "beagle_normal.png",
+        PetState.SICK: "beagle_sick.png",
+        PetState.EVOLVED: "beagle_evolved.png",
+    },
 }
 
 DEFAULT_BACKGROUND_BY_STATE: dict[PetState, str] = {
@@ -26,7 +33,7 @@ NORMAL_SCENE_MODE_TO_BACKGROUND: dict[str, str] = {
 
 @dataclass(frozen=True)
 class SceneAssetKeys:
-    pet_asset_key: str
+    pet_asset_label: str
     background_scene_type: str
     effective_scene_mode: str
 
@@ -59,36 +66,39 @@ def select_scene_asset_keys(
     pet_state: PetState,
     selected_scene_mode: str | None = None,
     *,
+    pet_character: PetCharacter = PetCharacter.ORIGINAL,
     normal_night_available: bool = True,
 ) -> SceneAssetKeys:
-    pet_asset_key = PET_ASSET_BY_STATE[pet_state]
+    pet_asset_label = PET_ASSET_LABELS[pet_character][pet_state]
 
     if pet_state is PetState.EVOLVED:
-        return SceneAssetKeys(pet_asset_key, "evolved_scene", "evolved")
-
-    if pet_state is PetState.SICK:
-        return SceneAssetKeys(pet_asset_key, "night_scene", "night")
+        return SceneAssetKeys(pet_asset_label, "evolved_scene", "evolved")
 
     requested_mode = selected_scene_mode if selected_scene_mode in {"day", "night"} else "day"
     if requested_mode == "night" and normal_night_available:
-        return SceneAssetKeys(pet_asset_key, "night_scene", "night")
+        return SceneAssetKeys(pet_asset_label, "night_scene", "night")
 
-    return SceneAssetKeys(pet_asset_key, "daytime_scene", "day")
+    return SceneAssetKeys(pet_asset_label, "daytime_scene", "day")
 
 
 def load_scene_assets(
     repository: PetRepository,
     pet_state: PetState,
     selected_scene_mode: str | None = None,
+    pet_character: PetCharacter = PetCharacter.ORIGINAL,
 ) -> SceneAssets:
     try:
         night_background = repository.fetch_active_background_asset("night_scene")
         keys = select_scene_asset_keys(
             pet_state,
             selected_scene_mode,
+            pet_character=pet_character,
             normal_night_available=night_background is not None,
         )
-        pet_asset = repository.fetch_active_pet_asset(pet_state.value)
+        pet_asset = repository.fetch_active_pet_asset(
+            pet_state.value,
+            pet_character.value,
+        )
         background_asset = _background_for_keys(repository, keys, night_background)
     except RepositoryError as exc:
         return SceneAssets(
@@ -100,7 +110,7 @@ def load_scene_assets(
 
     missing: list[str] = []
     if pet_asset is None:
-        missing.append(keys.pet_asset_key)
+        missing.append(keys.pet_asset_label)
     if background_asset is None:
         missing.append(keys.background_scene_type)
 
@@ -117,16 +127,20 @@ def load_scene_assets(
 def load_pet_sprite_asset(
     repository: PetRepository,
     pet_state: PetState,
+    pet_character: PetCharacter = PetCharacter.ORIGINAL,
 ) -> PetSpriteAsset:
     try:
-        asset = repository.fetch_active_pet_asset(pet_state.value)
+        asset = repository.fetch_active_pet_asset(
+            pet_state.value,
+            pet_character.value,
+        )
     except RepositoryError as exc:
         return PetSpriteAsset(image_url=None, error=str(exc))
 
     if asset is None:
         return PetSpriteAsset(
             image_url=None,
-            error=f"Missing active image asset: {PET_ASSET_BY_STATE[pet_state]}",
+            error=f"Missing active image asset: {PET_ASSET_LABELS[pet_character][pet_state]}",
         )
 
     return PetSpriteAsset(image_url=asset.url)

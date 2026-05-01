@@ -10,6 +10,7 @@ from src.domain.pet_types import (
     EventType,
     Pet,
     PetAction,
+    PetCharacter,
     PetEvent,
     PetState,
     StatBlock,
@@ -45,6 +46,7 @@ def create_pet(
     *,
     now: datetime | None = None,
     pet_id: str | None = None,
+    character: PetCharacter | str = PetCharacter.ORIGINAL,
 ) -> Pet:
     created_at = _ensure_aware(now or utc_now())
     return Pet(
@@ -61,6 +63,7 @@ def create_pet(
         sick_streak=0,
         recovery_streak=0,
         care_action_count=0,
+        character=_resolve_pet_character(character),
     )
 
 
@@ -216,6 +219,15 @@ def _resolve_action(action: PetAction | str) -> PetAction:
         return PetAction(action)
     except ValueError as exc:
         raise InvalidPetActionError(f"Unsupported pet action: {action}") from exc
+
+
+def _resolve_pet_character(character: PetCharacter | str) -> PetCharacter:
+    if isinstance(character, PetCharacter):
+        return character
+    try:
+        return PetCharacter(character)
+    except ValueError as exc:
+        raise PetValidationError(f"Unsupported pet character: {character}") from exc
 
 
 def _action_message(

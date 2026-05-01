@@ -12,6 +12,11 @@ class PetState(str, Enum):
     EVOLVED = "evolved"
 
 
+class PetCharacter(str, Enum):
+    ORIGINAL = "original"
+    BEAGLE = "beagle"
+
+
 class PetAction(str, Enum):
     FEED = "feed"
     PLAY = "play"
@@ -67,6 +72,7 @@ class Pet:
     sick_streak: int = 0
     recovery_streak: int = 0
     care_action_count: int = 0
+    character: PetCharacter = PetCharacter.ORIGINAL
 
     @property
     def hunger(self) -> int:

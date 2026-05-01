@@ -8,7 +8,7 @@ import streamlit as st
 from src.data.supabase_client import SupabaseConfigError
 from src.domain import pet_rules
 from src.domain.pet_engine import PetValidationError, state_message
-from src.domain.pet_types import Pet, PetAction, PetState
+from src.domain.pet_types import Pet, PetAction, PetCharacter, PetState
 from src.services.asset_service import SceneAssets, load_scene_assets
 from src.services.persistence_service import build_supabase_repository
 from src.services.pet_service import (
@@ -36,8 +36,17 @@ def _repository():
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def _cached_scene_assets(pet_state_value: str, scene_mode: str) -> SceneAssets:
-    return load_scene_assets(_repository(), PetState(pet_state_value), scene_mode)
+def _cached_scene_assets(
+    pet_state_value: str,
+    scene_mode: str,
+    pet_character_value: str,
+) -> SceneAssets:
+    return load_scene_assets(
+        _repository(),
+        PetState(pet_state_value),
+        scene_mode,
+        PetCharacter(pet_character_value),
+    )
 
 
 def main() -> None:
@@ -66,7 +75,11 @@ def _render_live_status(repository) -> None:
     pet = startup.pet
     message = st.session_state.pop("pet_message", None) or _default_message(pet)
     scene_mode = st.session_state.setdefault("scene_mode", "day")
-    scene_assets = _cached_scene_assets(pet.state.value, scene_mode)
+    scene_assets = _cached_scene_assets(
+        pet.state.value,
+        scene_mode,
+        pet.character.value,
+    )
     if scene_assets.error:
         st.warning(scene_assets.error)
 
@@ -81,7 +94,7 @@ def _render_live_status(repository) -> None:
     with action_label:
         st.markdown("### Actions")
     with scene_picker:
-        if pet.state is PetState.NORMAL:
+        if pet.state is not PetState.EVOLVED:
             mode = st.selectbox(
                 "Scene",
                 ["day", "night"],
@@ -134,13 +147,23 @@ def _render_creation(repository) -> None:
 
     with st.form("create-pet"):
         name = st.text_input("Pet name", max_chars=20)
+        character_choice = st.radio(
+            "Choose a character",
+            options=[PetCharacter.ORIGINAL.value, PetCharacter.BEAGLE.value],
+            format_func=_character_label,
+            horizontal=True,
+        )
         submitted = st.form_submit_button("Create pet")
 
     if not submitted:
         return
 
     try:
-        result = create_pet(repository, name)
+        result = create_pet(
+            repository,
+            name,
+            character=PetCharacter(character_choice),
+        )
     except PetValidationError as exc:
         st.error(str(exc))
         return
@@ -326,6 +349,13 @@ def _pet_face(pet: Pet) -> str:
 
 def _default_message(pet: Pet) -> str:
     return state_message(pet)
+
+
+def _character_label(value: str) -> str:
+    return {
+        PetCharacter.ORIGINAL.value: "Original",
+        PetCharacter.BEAGLE.value: "Beagle",
+    }[value]
 
 
 def _render_styles() -> None:

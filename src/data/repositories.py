@@ -6,7 +6,15 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from src.domain.pet_engine import clamp_stats
-from src.domain.pet_types import EventType, Pet, PetAction, PetEvent, PetState, StatBlock
+from src.domain.pet_types import (
+    EventType,
+    Pet,
+    PetAction,
+    PetCharacter,
+    PetEvent,
+    PetState,
+    StatBlock,
+)
 
 
 ACTIVE_PET_ID = "active-pet"
@@ -45,7 +53,11 @@ class PetRepository(Protocol):
     def list_recent_events(self, pet_id: str, *, limit: int = 20) -> tuple[PetEvent, ...]:
         ...
 
-    def fetch_active_pet_asset(self, state: str) -> AssetRecord | None:
+    def fetch_active_pet_asset(
+        self,
+        state: str,
+        character: str = PetCharacter.ORIGINAL.value,
+    ) -> AssetRecord | None:
         ...
 
     def fetch_active_background_asset(self, scene_type: str) -> AssetRecord | None:
@@ -121,14 +133,17 @@ class SupabasePetRepository:
         events = tuple(event_from_record(row) for row in response.data or [])
         return tuple(reversed(events))
 
-    def fetch_active_pet_asset(self, state: str) -> AssetRecord | None:
+    def fetch_active_pet_asset(
+        self,
+        state: str,
+        character: str = PetCharacter.ORIGINAL.value,
+    ) -> AssetRecord | None:
         try:
             response = (
                 self._client.table("pet_assets")
                 .select("*")
                 .eq("state", state)
                 .eq("is_active", True)
-                .limit(1)
                 .execute()
             )
         except Exception as exc:
@@ -139,7 +154,17 @@ class SupabasePetRepository:
         rows = response.data or []
         if not rows:
             return None
-        return asset_from_record(rows[0], self._client)
+        selected = _select_pet_asset_record(rows, state, character)
+        if selected is None:
+            base_row = _select_pet_asset_record(
+                rows,
+                state,
+                PetCharacter.ORIGINAL.value,
+            )
+            selected = _infer_pet_asset_record(base_row or rows[0], state, character)
+        if selected is None:
+            return None
+        return asset_from_record(selected, self._client)
 
     def fetch_active_background_asset(self, scene_type: str) -> AssetRecord | None:
         try:
@@ -191,8 +216,17 @@ class InMemoryPetRepository:
         matching = [event for event in self.events if event.pet_id == pet_id]
         return tuple(matching[-limit:])
 
-    def fetch_active_pet_asset(self, state: str) -> AssetRecord | None:
-        return self.pet_assets.get(state)
+    def fetch_active_pet_asset(
+        self,
+        state: str,
+        character: str = PetCharacter.ORIGINAL.value,
+    ) -> AssetRecord | None:
+        character_key = _normalize_pet_character_value(character)
+        return self.pet_assets.get(f"{character_key}:{state}") or (
+            self.pet_assets.get(state)
+            if character_key == PetCharacter.ORIGINAL.value
+            else None
+        )
 
     def fetch_active_background_asset(self, scene_type: str) -> AssetRecord | None:
         for asset in self.background_assets.values():
@@ -250,6 +284,7 @@ def pet_from_record(record: dict[str, Any]) -> Pet:
     return Pet(
         id=str(record["id"]),
         name=str(record["name"]),
+        character=PetCharacter.ORIGINAL,
         state=state,
         stats=stats,
         age_ticks=max(0, _parse_int_field(record, "age_ticks")),
@@ -462,3 +497,90 @@ def _resolve_asset_url(record: dict[str, Any], client: Any | None = None) -> str
         return str(client.storage.from_(bucket).get_public_url(object_path))
     except Exception:
         return None
+
+
+def _select_pet_asset_record(
+    rows: list[dict[str, Any]],
+    state: str,
+    character: str,
+) -> dict[str, Any] | None:
+    normalized_character = _normalize_pet_character_value(character)
+    candidates = _pet_asset_candidates(state, normalized_character)
+    for row in rows:
+        searchable = " ".join(
+            str(row.get(field) or "").lower()
+            for field in ("asset_key", "file_path", "public_url")
+        )
+        if any(candidate in searchable for candidate in candidates):
+            return row
+
+    if normalized_character == PetCharacter.ORIGINAL.value:
+        return rows[0]
+    return None
+
+
+def _infer_pet_asset_record(
+    base_row: dict[str, Any],
+    state: str,
+    character: str,
+) -> dict[str, Any] | None:
+    normalized_character = _normalize_pet_character_value(character)
+    if normalized_character != PetCharacter.BEAGLE.value:
+        return None
+
+    filename = f"beagle_{state}.png"
+    asset_key = f"beagle_{state}"
+    record = dict(base_row)
+    record["asset_key"] = asset_key
+
+    public_url = record.get("public_url")
+    file_path = record.get("file_path")
+    if public_url:
+        updated_url = _replace_asset_filename(str(public_url), filename)
+        if updated_url:
+            record["public_url"] = updated_url
+            return record
+
+    if file_path:
+        updated_path = _replace_asset_filename(str(file_path), filename)
+        if updated_path:
+            record["file_path"] = updated_path
+            record["public_url"] = None
+            return record
+
+    return None
+
+
+def _pet_asset_candidates(state: str, character: str) -> tuple[str, ...]:
+    if character == PetCharacter.BEAGLE.value:
+        file_stem = f"beagle_{state}"
+        if state == PetState.EVOLVED.value:
+            return (
+                file_stem,
+                f"{file_stem}.png",
+                f"{file_stem}.ppng",
+            )
+        return (
+            file_stem,
+            f"{file_stem}.png",
+        )
+
+    return (
+        f"{state}_pet",
+        f"{state}_pet.png",
+    )
+
+
+def _normalize_pet_character_value(value: Any) -> str:
+    try:
+        return PetCharacter(value or PetCharacter.ORIGINAL.value).value
+    except ValueError:
+        return PetCharacter.ORIGINAL.value
+
+
+def _replace_asset_filename(path: str, filename: str) -> str | None:
+    cleaned = path.strip()
+    if "/" not in cleaned:
+        return None
+    prefix, _ = cleaned.rsplit("/", 1)
+    return f"{prefix}/{filename}"

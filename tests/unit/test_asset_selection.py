@@ -1,5 +1,5 @@
 from src.data.repositories import AssetRecord, InMemoryPetRepository
-from src.domain.pet_types import PetState
+from src.domain.pet_types import PetCharacter, PetState
 from src.services.asset_service import (
     load_pet_sprite_asset,
     load_scene_assets,
@@ -10,7 +10,7 @@ from src.services.asset_service import (
 def test_normal_state_uses_daytime_scene_by_default():
     keys = select_scene_asset_keys(PetState.NORMAL)
 
-    assert keys.pet_asset_key == "normal_pet"
+    assert keys.pet_asset_label == "normal_pet"
     assert keys.background_scene_type == "daytime_scene"
     assert keys.effective_scene_mode == "day"
 
@@ -18,7 +18,7 @@ def test_normal_state_uses_daytime_scene_by_default():
 def test_normal_state_allows_night_when_available():
     keys = select_scene_asset_keys(PetState.NORMAL, "night")
 
-    assert keys.pet_asset_key == "normal_pet"
+    assert keys.pet_asset_label == "normal_pet"
     assert keys.background_scene_type == "night_scene"
     assert keys.effective_scene_mode == "night"
 
@@ -34,10 +34,18 @@ def test_normal_state_ignores_night_when_background_is_missing():
     assert keys.effective_scene_mode == "day"
 
 
-def test_sick_state_forces_night_scene():
+def test_sick_state_uses_selected_day_scene():
     keys = select_scene_asset_keys(PetState.SICK, "day")
 
-    assert keys.pet_asset_key == "sick_pet"
+    assert keys.pet_asset_label == "sick_pet"
+    assert keys.background_scene_type == "daytime_scene"
+    assert keys.effective_scene_mode == "day"
+
+
+def test_sick_state_allows_night_when_selected():
+    keys = select_scene_asset_keys(PetState.SICK, "night")
+
+    assert keys.pet_asset_label == "sick_pet"
     assert keys.background_scene_type == "night_scene"
     assert keys.effective_scene_mode == "night"
 
@@ -45,9 +53,21 @@ def test_sick_state_forces_night_scene():
 def test_evolved_state_forces_evolved_scene():
     keys = select_scene_asset_keys(PetState.EVOLVED, "night")
 
-    assert keys.pet_asset_key == "evolved_pet"
+    assert keys.pet_asset_label == "evolved_pet"
     assert keys.background_scene_type == "evolved_scene"
     assert keys.effective_scene_mode == "evolved"
+
+
+def test_beagle_character_uses_beagle_asset_labels():
+    keys = select_scene_asset_keys(
+        PetState.NORMAL,
+        "day",
+        pet_character=PetCharacter.BEAGLE,
+    )
+
+    assert keys.pet_asset_label == "beagle_normal.png"
+    assert keys.background_scene_type == "daytime_scene"
+    assert keys.effective_scene_mode == "day"
 
 
 def test_load_scene_assets_returns_urls_when_assets_exist():
@@ -112,3 +132,47 @@ def test_load_pet_sprite_asset_uses_state_sprite():
     assert asset.image_url == "https://example.test/evolved_pet.png"
     assert asset.error is None
     assert asset.has_image is True
+
+
+def test_load_scene_assets_uses_beagle_sprite_when_selected():
+    repository = InMemoryPetRepository()
+    repository.pet_assets["beagle:normal"] = AssetRecord(
+        asset_key="beagle_normal",
+        url="https://example.test/beagle_normal.png",
+    )
+    repository.background_assets["day"] = AssetRecord(
+        asset_key="daytime_scene",
+        url="https://example.test/daytime_scene.png",
+    )
+    repository.background_assets["night"] = AssetRecord(
+        asset_key="night_scene",
+        url="https://example.test/night_scene.png",
+    )
+
+    assets = load_scene_assets(
+        repository,
+        PetState.NORMAL,
+        "day",
+        PetCharacter.BEAGLE,
+    )
+
+    assert assets.pet_image_url == "https://example.test/beagle_normal.png"
+    assert assets.background_image_url == "https://example.test/daytime_scene.png"
+    assert assets.error is None
+
+
+def test_load_pet_sprite_asset_uses_beagle_state_sprite():
+    repository = InMemoryPetRepository()
+    repository.pet_assets["beagle:evolved"] = AssetRecord(
+        asset_key="beagle_evolved",
+        url="https://example.test/beagle_evolved.png",
+    )
+
+    asset = load_pet_sprite_asset(
+        repository,
+        PetState.EVOLVED,
+        PetCharacter.BEAGLE,
+    )
+
+    assert asset.image_url == "https://example.test/beagle_evolved.png"
+    assert asset.error is None

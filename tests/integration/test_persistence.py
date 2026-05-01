@@ -6,13 +6,14 @@ from src.data.repositories import (
     AssetRecord,
     InMemoryPetRepository,
     InvalidPetRecordError,
+    _infer_pet_asset_record,
     asset_from_record,
     event_from_record,
     event_to_record,
     pet_from_record,
     pet_to_record,
 )
-from src.domain.pet_types import EventType, PetAction, PetEvent
+from src.domain.pet_types import EventType, PetAction, PetCharacter, PetEvent
 from src.services.pet_service import (
     advance_pet_time,
     care_for_pet,
@@ -126,6 +127,23 @@ def test_reset_active_pet_replaces_pet_and_clears_events():
     assert repository.events == []
 
 
+def test_create_pet_persists_selected_character():
+    repository = InMemoryPetRepository()
+
+    created = create_pet(
+        repository,
+        "Mochi",
+        now=BASE_TIME,
+        character=PetCharacter.BEAGLE,
+    )
+
+    assert created.pet is not None
+    assert created.pet.character is PetCharacter.BEAGLE
+    assert repository.pet is not None
+    assert repository.pet.character is PetCharacter.BEAGLE
+    assert repository.events[-1].payload["character"] == "beagle"
+
+
 def test_pet_record_round_trip_clamps_out_of_range_stats():
     repository = InMemoryPetRepository()
     created = create_pet(repository, "Mochi", now=BASE_TIME)
@@ -139,6 +157,35 @@ def test_pet_record_round_trip_clamps_out_of_range_stats():
 
     assert loaded.hunger == 100
     assert loaded.energy == 0
+
+
+def test_pet_record_defaults_character_to_original():
+    created = create_pet(InMemoryPetRepository(), "Mochi", now=BASE_TIME)
+    assert created.pet is not None
+
+    record = pet_to_record(created.pet)
+
+    loaded = pet_from_record(record)
+
+    assert loaded.character is PetCharacter.ORIGINAL
+
+
+def test_load_active_pet_restores_character_from_existing_event_schema():
+    repository = InMemoryPetRepository()
+    created = create_pet(
+        repository,
+        "Mochi",
+        now=BASE_TIME,
+        character=PetCharacter.BEAGLE,
+    )
+    assert created.pet is not None
+
+    repository.pet = pet_from_record(pet_to_record(created.pet))
+
+    loaded = load_active_pet(repository, now=BASE_TIME)
+
+    assert loaded.pet is not None
+    assert loaded.pet.character is PetCharacter.BEAGLE
 
 
 def test_pet_record_accepts_supabase_five_digit_fractional_timestamps():
@@ -203,3 +250,22 @@ def test_asset_record_uses_public_url_when_present():
         width=128,
         height=128,
     )
+
+
+def test_beagle_asset_can_be_inferred_from_original_asset_path():
+    inferred = _infer_pet_asset_record(
+        {
+            "asset_key": "normal_pet",
+            "state": "normal",
+            "file_path": "pet-assets/normal_pet.png",
+            "width": 128,
+            "height": 128,
+            "is_active": True,
+        },
+        "normal",
+        PetCharacter.BEAGLE.value,
+    )
+
+    assert inferred is not None
+    assert inferred["asset_key"] == "beagle_normal"
+    assert inferred["file_path"] == "pet-assets/beagle_normal.png"

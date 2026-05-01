@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.data.repositories import (
     ACTIVE_PET_ID,
@@ -11,7 +11,14 @@ from src.data.repositories import (
 )
 from src.domain.pet_engine import create_pet as create_domain_pet
 from src.domain.pet_engine import apply_action, apply_elapsed_time
-from src.domain.pet_types import ActionResult, Pet, PetAction, PetEvent
+from src.domain.pet_types import (
+    ActionResult,
+    EventType,
+    Pet,
+    PetAction,
+    PetCharacter,
+    PetEvent,
+)
 
 
 @dataclass(frozen=True)
@@ -47,6 +54,7 @@ def load_active_pet(
     if pet is None:
         return StartupResult(pet=None, needs_creation=True)
 
+    pet = _apply_saved_character(repository, pet)
     tick_result = apply_elapsed_time(pet, now=now)
     if tick_result.applied_ticks > 0 or tick_result.events:
         try:
@@ -73,6 +81,7 @@ def advance_pet_time(
     *,
     now: datetime | None = None,
 ) -> StartupResult:
+    pet = _apply_saved_character(repository, pet)
     tick_result = apply_elapsed_time(pet, now=now)
     if tick_result.applied_ticks > 0 or tick_result.events:
         try:
@@ -98,10 +107,21 @@ def create_pet(
     name: str,
     *,
     now: datetime | None = None,
+    character: PetCharacter | str = PetCharacter.ORIGINAL,
 ) -> StartupResult:
-    pet = create_domain_pet(name, now=now, pet_id=ACTIVE_PET_ID)
+    resolved_character = PetCharacter(character)
+    pet = create_domain_pet(
+        name,
+        now=now,
+        pet_id=ACTIVE_PET_ID,
+        character=resolved_character,
+    )
     try:
         repository.upsert_pet(pet)
+        if resolved_character is not PetCharacter.ORIGINAL:
+            repository.append_events(
+                (_character_event(pet.id, resolved_character, now=now),)
+            )
     except RepositoryError as exc:
         return StartupResult(pet=pet, needs_creation=True, error=str(exc))
     return StartupResult(pet=pet, needs_creation=False)
@@ -112,14 +132,52 @@ def reset_active_pet(
     name: str,
     *,
     now: datetime | None = None,
+    character: PetCharacter | str = PetCharacter.ORIGINAL,
 ) -> StartupResult:
-    pet = create_domain_pet(name, now=now, pet_id=ACTIVE_PET_ID)
+    resolved_character = PetCharacter(character)
+    pet = create_domain_pet(
+        name,
+        now=now,
+        pet_id=ACTIVE_PET_ID,
+        character=resolved_character,
+    )
     try:
         repository.delete_events_for_pet(ACTIVE_PET_ID)
         repository.upsert_pet(pet)
+        if resolved_character is not PetCharacter.ORIGINAL:
+            repository.append_events(
+                (_character_event(pet.id, resolved_character, now=now),)
+            )
     except RepositoryError as exc:
         return StartupResult(pet=pet, needs_creation=True, error=str(exc))
     return StartupResult(pet=pet, needs_creation=False)
+
+
+def update_pet_character(
+    repository: PetRepository,
+    pet: Pet,
+    character: PetCharacter | str,
+    *,
+    now: datetime | None = None,
+) -> StartupResult:
+    resolved_character = PetCharacter(character)
+    timestamp = now or _utc_now()
+    updated_pet = pet.with_changes(
+        character=resolved_character,
+        updated_at=timestamp,
+    )
+    try:
+        repository.upsert_pet(updated_pet)
+        repository.append_events(
+            (_character_event(updated_pet.id, resolved_character, now=timestamp),)
+        )
+    except RepositoryError as exc:
+        return StartupResult(
+            pet=pet,
+            needs_creation=False,
+            error=str(exc),
+        )
+    return StartupResult(pet=updated_pet, needs_creation=False)
 
 
 def care_for_pet(
@@ -130,6 +188,7 @@ def care_for_pet(
     now: datetime | None = None,
 ) -> ServiceActionResult:
     try:
+        pet = _apply_saved_character(repository, pet)
         tick_result = apply_elapsed_time(pet, now=now)
         pet_after_time = tick_result.pet
         recent_events = repository.list_recent_events(pet.id, limit=20)
@@ -154,3 +213,43 @@ def care_for_pet(
         message=result.message,
         events=(*tick_result.events, *result.events),
     )
+
+
+def _apply_saved_character(repository: PetRepository, pet: Pet) -> Pet:
+    try:
+        recent_events = repository.list_recent_events(pet.id, limit=50)
+    except RepositoryError:
+        return pet
+
+    for event in reversed(recent_events):
+        if event.payload.get("meta") == "character_selection":
+            character_value = event.payload.get("character")
+            try:
+                return pet.with_changes(character=PetCharacter(character_value))
+            except ValueError:
+                return pet
+    return pet
+
+
+def _character_event(
+    pet_id: str,
+    character: PetCharacter,
+    *,
+    now: datetime | None = None,
+) -> PetEvent:
+    timestamp = now or _utc_now()
+    return PetEvent(
+        event_type=EventType.ACTION,
+        pet_id=pet_id,
+        action=None,
+        message=f"Character changed to {character.value.title()}.",
+        created_at=timestamp,
+        payload={
+            "meta": "character_selection",
+            "character": character.value,
+        },
+    )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
